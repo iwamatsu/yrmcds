@@ -27,7 +27,7 @@ thread_local int g_context = -1;
 object::object(const char* p, std::size_t len,
                std::uint32_t flags_, std::time_t exptime):
     m_length(len), m_data(0), m_file(nullptr),
-    m_flags(flags_), m_exptime(exptime) {
+    m_flags(flags_), m_exptime(exptime), m_unlocker(std::this_thread::get_id()) {
     if( len > g_config.heap_data_limit() ) {
         m_file = std::unique_ptr<tempfile>(new tempfile);
         m_file->write(p, len);
@@ -39,7 +39,7 @@ object::object(const char* p, std::size_t len,
 }
 
 object::object(std::uint64_t initial, std::time_t exptime):
-    m_length(0), m_data(24), m_file(nullptr), m_flags(0), m_exptime(exptime) {
+    m_length(0), m_data(24), m_file(nullptr), m_flags(0), m_exptime(exptime), m_unlocker(std::this_thread::get_id()) {
     char s_value[24]; // uint64 can be as large as 20 byte decimal string.
     m_length = ::snprintf(s_value, sizeof(s_value),
                           "%llu", (unsigned long long)initial);
