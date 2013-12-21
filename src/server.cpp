@@ -19,21 +19,15 @@ server::server():
     m_hash(g_config.buckets()), m_syncer(m_workers) {
     m_slaves.reserve(MAX_SLAVES);
     m_new_slaves.reserve(MAX_SLAVES);
-    m_finder = [this]() ->worker* {
+    m_finder = [this]() ->cybozu::worker* {
         std::size_t n_workers = m_workers.size();
         for( std::size_t i = 0; i < n_workers; ++i ) {
-            worker* pw = m_workers[m_worker_index].get();
+            cybozu::worker* pw = m_workers[m_worker_index].get();
             m_worker_index = (m_worker_index + 1) % n_workers;
             if( ! pw->is_running() )
                 return pw;
         }
         return nullptr;
-    };
-    m_unlocker = [this](const cybozu::hash_key& k, bool force) {
-        m_hash.apply(k, [force](const cybozu::hash_key&, object& obj) -> bool {
-                obj.unlock(force);
-                return true;
-            }, nullptr);
     };
 }
 
@@ -205,9 +199,7 @@ void server::serve_master() {
     };
 
     for( unsigned int i = 0; i < g_config.workers(); ++i )
-        m_workers.emplace_back(
-            new worker(m_hash, [this]() -> std::vector<cybozu::tcp_socket*> {
-                    return m_slaves; }));
+        m_workers.emplace_back(new cybozu::worker(WORKER_BUFSIZE));
     for( auto& w: m_workers )
         w->start();
 
@@ -237,14 +229,19 @@ std::unique_ptr<cybozu::tcp_socket> server::make_memcache_socket(int s) {
     if( m_is_slave )
         return nullptr;
 
+    unsigned int mc = g_config.max_connections();
+    if( mc != 0 &&
+        (g_stats.curr_connections.load(std::memory_order_relaxed) >= mc) )
+        return nullptr;
+
     return std::unique_ptr<cybozu::tcp_socket>(
-        new memcache_socket(s, m_finder, m_unlocker) );
+        new memcache_socket(s, m_finder, m_hash, m_slaves) );
 }
 
 std::unique_ptr<cybozu::tcp_socket> server::make_repl_socket(int s) {
     if( m_slaves.size() == MAX_SLAVES )
         return nullptr;
-    std::unique_ptr<cybozu::tcp_socket> t( new repl_socket(s) );
+    std::unique_ptr<cybozu::tcp_socket> t( new repl_socket(s, m_finder) );
     cybozu::tcp_socket* pt = t.get();
     m_slaves.push_back(pt);
     m_syncer.add_request(

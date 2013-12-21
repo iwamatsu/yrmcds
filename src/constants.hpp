@@ -15,7 +15,7 @@ const unsigned int  DEFAULT_BUCKETS        = 1000000;
 const std::size_t   DEFAULT_MAX_DATA_SIZE  = static_cast<std::size_t>(1) << 20;
 const std::size_t   DEFAULT_HEAP_DATA_LIMIT= 256 << 10;
 const std::size_t   DEFAULT_MEMORY_LIMIT   = static_cast<std::size_t>(1) << 30;
-const int           DEFAULT_WORKER_THREADS = 3;
+const int           DEFAULT_WORKER_THREADS = 8;
 const unsigned int  DEFAULT_GC_INTERVAL    = 10;
 const char          DEFAULT_TMPDIR[]       = "/var/tmp";
 
@@ -29,7 +29,7 @@ const std::size_t   MAX_REQUEST_LENGTH  = 30 << 20; // 30 MiB
 const int           MAX_SLAVES          = 5;
 const int           MAX_CONSECUTIVE_GCS = 3;
 
-const char          VERSION[] = "yrmcds version 0.9.5";
+const char          VERSION[] = "yrmcds version 1.0.0";
 
 } // namespace yrmcds
 
